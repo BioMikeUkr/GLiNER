@@ -202,7 +202,7 @@ class HNSWfaiss(BaseVectorDb):
         if query.ndim == 1:
             query = np.expand_dims(query, axis=0)
         distances, ids = self.index.search(query, top_k)
-        print(distances, ids)
+
         return {
         "ids": ids.tolist()[0],
         "distances": distances.tolist()[0]
