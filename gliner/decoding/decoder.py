@@ -14,22 +14,30 @@ class BaseDecoder(ABC):
     def decode(self, *args, **kwargs):
         pass
 
-    def greedy_search(self, spans, flat_ner=True, multi_label=False):
+    def greedy_search(self, spans, flat_ner=True, multi_label=False, with_span_embeddings=False):
         if flat_ner:
             has_ov = partial(has_overlapping, multi_label=multi_label)
         else:
             has_ov = partial(has_overlapping_nested, multi_label=multi_label)
 
         new_list = []
-        span_prob = sorted(spans, key=lambda x: -x[-1])
+        if not with_span_embeddings:
+            span_prob = sorted(spans, key=lambda x: -x[-1])
+        else:
+            span_prob = sorted(spans, key=lambda x: -x[-2])
 
         for i in range(len(spans)):
             b = span_prob[i]
             flag = False
             for new in new_list:
-                if has_ov(b[:-1], new):
-                    flag = True
-                    break
+                if not with_span_embeddings:
+                    if has_ov(b[:-1], new):
+                        flag = True
+                        break
+                else:
+                    if has_ov(b[:-2], new):
+                        flag = True
+                        break
             if not flag:
                 new_list.append(b)
 
@@ -54,6 +62,31 @@ class SpanDecoder(BaseDecoder):
             spans.append(span_i)
         return spans
 
+
+class SpanLinkerDecoder(BaseDecoder):
+    def decode(self, tokens, id_to_classes, model_output, span_rep, flat_ner=False, threshold=0.5, multi_label=False):
+        probs = torch.sigmoid(model_output)
+        spans = []
+        
+        for i, _ in enumerate(tokens):
+            probs_i = probs[i]
+            span_rep_i = span_rep[i]
+            
+            wh_i = [i.tolist() for i in torch.where(probs_i > threshold)]
+            span_i = []
+            
+            for s, k, c in zip(*wh_i):
+                if s + k < len(tokens[i]):
+                    span_class = id_to_classes[c + 1]
+                    span_prob = probs_i[s, k, c].item()
+                    span_embedding = span_rep_i[s, k].detach().cpu().numpy()
+                    span_i.append((s, s + k, span_class, span_prob, span_embedding))
+                    
+            span_i = self.greedy_search(span_i, flat_ner, multi_label=multi_label, with_span_embeddings=True)
+            spans.append(span_i)
+        
+        return spans
+    
 
 class TokenDecoder(BaseDecoder):
     def get_indices_above_threshold(self, scores, threshold):
