@@ -23,6 +23,7 @@ class GLiNERModelOutput(ModelOutput):
     prompts_embedding_mask: Optional[torch.LongTensor] = None
     words_embedding: Optional[torch.FloatTensor] = None
     mask: Optional[torch.LongTensor] = None
+    span_rep: Optional[torch.FloatTensor] = None
 
 def extract_word_embeddings(token_embeds, words_mask, attention_mask, 
                                     batch_size, max_text_length, embed_dim, text_lengths):
@@ -227,6 +228,7 @@ class SpanModel(BaseModel):
                 span_idx: Optional[torch.LongTensor] = None,
                 span_mask: Optional[torch.LongTensor] = None,
                 labels: Optional[torch.FloatTensor] = None,
+                return_span_embeddings: bool = False,
                 **kwargs
                 ):
 
@@ -252,6 +254,7 @@ class SpanModel(BaseModel):
             prompts_embedding_mask=prompts_embedding_mask,
             words_embedding=words_embedding,
             mask=mask,
+            span_rep = span_rep if return_span_embeddings else None
         )
         return output
     

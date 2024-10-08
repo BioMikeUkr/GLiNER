@@ -28,6 +28,7 @@ class GLiNERConfig(PretrainedConfig):
                  class_token_index: int = -1,
                  encoder_config: Optional[dict] = None,
                  labels_encoder_config: Optional[dict] = None,
+                 entity_linking: str = None,
                  ent_token = "<<ENT>>",
                  sep_token = "<<SEP>>",
                  **kwargs):
@@ -55,6 +56,7 @@ class GLiNERConfig(PretrainedConfig):
         self.fine_tune = fine_tune
         self.subtoken_pooling = subtoken_pooling
         self.span_mode = span_mode
+        self.entity_linking = entity_linking
         self.post_fusion_schema = post_fusion_schema
         self.num_post_fusion_layers = num_post_fusion_layers
         self.vocab_size = vocab_size

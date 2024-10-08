@@ -19,7 +19,7 @@ from .config import GLiNERConfig
 from .data_processing import SpanProcessor, SpanBiEncoderProcessor, TokenProcessor, TokenBiEncoderProcessor
 from .data_processing.collator import DataCollator, DataCollatorWithPadding
 from .data_processing.tokenizer import WordsSplitter
-from .decoding import SpanDecoder, TokenDecoder
+from .decoding import SpanDecoder, TokenDecoder, SpanLinkerDecoder
 from .evaluation import Evaluator
 from .modeling.base import BaseModel, SpanModel, TokenModel
 from .onnx.model import BaseORTModel, SpanORTModel, TokenORTModel
@@ -83,7 +83,11 @@ class GLiNER(nn.Module, PyTorchModelHubMixin):
                     self.data_processor = SpanProcessor(config, tokenizer, words_splitter)
             else:
                 self.data_processor = data_processor
-            self.decoder = SpanDecoder(config)
+
+            if config.entity_linking == "span_linking":
+                self.decoder = SpanLinkerDecoder(config)
+            else:
+                self.decoder = SpanDecoder(config)
 
         if config.vocab_size != -1 and config.vocab_size != len(
             self.data_processor.transformer_tokenizer
@@ -457,6 +461,97 @@ class GLiNER(nn.Module, PyTorchModelHubMixin):
                         "text": texts[i][start_text_idx:end_text_idx],
                         "label": ent_type,
                         "score": ent_score,
+                    }
+                )
+            all_entities.append(entities)
+
+        return all_entities
+    
+    def link_entities(
+        self, text, labels, flat_ner=True, threshold=0.5, multi_label=False, vector_db=None
+    ):
+        """
+        Link entities for a single text input with a pretrained HNSW database.
+
+        Args:
+            text: The input text to predict entities for.
+            labels: The labels to predict.
+            flat_ner (bool, optional): Whether to use flat NER. Defaults to True.
+            threshold (float, optional): Confidence threshold for predictions. Defaults to 0.5.
+            multi_label (bool, optional): Whether to allow multiple labels per entity. Defaults to False.
+            vector_db: instance of an HNSW pretrained database.
+
+        Returns:
+            The list of entity predictions.
+        """
+        return self.batch_link_entities(
+            [text],
+            labels,
+            flat_ner=flat_ner,
+            threshold=threshold,
+            multi_label=multi_label,
+            vector_db=vector_db,
+        )[0]
+
+    @torch.no_grad()
+    def batch_link_entities(
+        self, texts, labels, flat_ner=True, threshold=0.5, multi_label=False, vector_db=None
+    ):
+        """
+        Predict entities for a batch of texts.
+
+        Args:
+            texts (List[str]): A list of input texts to predict entities for.
+            labels (List[str]): A list of labels to predict.
+            flat_ner (bool, optional): Whether to use flat NER. Defaults to True.
+            threshold (float, optional): Confidence threshold for predictions. Defaults to 0.5.
+            multi_label (bool, optional): Whether to allow multiple labels per token. Defaults to False.
+            vector_db: instance of an HNSW pretrained database.
+
+        Returns:
+            The list of lists with predicted entities.
+        """
+
+        model_input, raw_batch = self.prepare_model_inputs(texts, labels)
+
+        model_output = self.model(**model_input, return_span_embeddings=True if vector_db else False)
+
+        if self.config.entity_linking:
+            span_rep = model_output[5]
+        model_output = model_output[0]
+
+        if not isinstance(model_output, torch.Tensor):
+            model_output = torch.from_numpy(model_output)
+
+        outputs = self.decoder.decode(
+            raw_batch["tokens"],
+            raw_batch["id_to_classes"],
+            model_output,
+            span_rep=span_rep,
+            flat_ner=flat_ner,
+            threshold=threshold,
+            multi_label=multi_label,
+        )
+
+        all_entities = []
+        for i, output in enumerate(outputs):
+            start_token_idx_to_text_idx = raw_batch["all_start_token_idx_to_text_idx"][
+                i
+            ]
+            end_token_idx_to_text_idx = raw_batch["all_end_token_idx_to_text_idx"][i]
+            entities = []
+            for start_token_idx, end_token_idx, ent_type, ent_score, span_embedding in output:
+                start_text_idx = start_token_idx_to_text_idx[start_token_idx]
+                end_text_idx = end_token_idx_to_text_idx[end_token_idx]
+                linked_entity = vector_db.search(span_embedding, top_k=5)
+                entities.append(
+                    {
+                        "start": start_token_idx_to_text_idx[start_token_idx],
+                        "end": end_token_idx_to_text_idx[end_token_idx],
+                        "text": texts[i][start_text_idx:end_text_idx],
+                        "label": ent_type,
+                        "score": ent_score,
+                        "linked_entity": linked_entity
                     }
                 )
             all_entities.append(entities)

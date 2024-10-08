@@ -1,0 +1,6 @@
+{
+    "db_type": "HNSWfaiss",
+    "ndim": 768,
+    "metric": "dotprod",
+    "model_type": "gliner_db"
+}
