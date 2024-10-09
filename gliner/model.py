@@ -635,7 +635,7 @@ class GLiNER(nn.Module, PyTorchModelHubMixin):
 
         return out, f1
 
-    def encode_labels(self, labels: List[str], batch_size: int = 8) -> torch.FloatTensor:
+    def encode_labels(self, labels: List[str], batch_size: int = 8, project_promts: bool = False) -> torch.FloatTensor:
         """
         Embedding of labels.
 
@@ -659,6 +659,8 @@ class GLiNER(nn.Module, PyTorchModelHubMixin):
                                                                 truncation=True, padding="max_length").to(self.device)
             with torch.no_grad():  # Disable gradient calculation for inference
                 curr_labels_embeddings = self.model.token_rep_layer.encode_labels(**tokenized_labels)
+                if project_promts:
+                    curr_labels_embeddings = self.model.prompt_rep_layer(curr_labels_embeddings)
             labels_embeddings.append(curr_labels_embeddings)
 
         return torch.cat(labels_embeddings, dim=0)
