@@ -158,9 +158,9 @@ class HNSW(BaseVectorDb):
 
 class IndexFlatIP(BaseVectorDb):
     """
-    HNSW vector database implementation.
+    IndexFlatIP vector database implementation.
     """
-    def __init__(self, ontology: Dict[int, Dict[str, Any]], ndim: int, metric: str = 'dotprod'):
+    def __init__(self, ontology: Dict[int, Dict[str, Any]], ndim: int, metric: str = 'ip'):
         """
         Initialize the HNSWfaiss index.
 
