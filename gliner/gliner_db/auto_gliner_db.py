@@ -2,7 +2,7 @@ from typing import Union, Optional, Dict, Any
 from huggingface_hub import snapshot_download
 from pathlib import Path
 import json
-from .gliner_db import BaseVectorDb, HNSW, HNSWfaiss
+from .gliner_db import BaseVectorDb, HNSW, IndexFlatIP
 from .gliner_db_config import GLiNERDBConfig
 
 class AutoGLiNERDb:
@@ -70,8 +70,8 @@ class AutoGLiNERDb:
 
         if db_type == "HNSW":
             return HNSW.from_pretrained(str(model_dir))
-        elif db_type == "HNSWfaiss":
-            return HNSWfaiss.from_pretrained(str(model_dir))
+        elif db_type == "IndexFlatIP":
+            return IndexFlatIP.from_pretrained(str(model_dir))
 
         else:
             raise ValueError(f"Unsupported database type: {db_type}")

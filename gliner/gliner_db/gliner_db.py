@@ -156,7 +156,7 @@ class HNSW(BaseVectorDb):
             return None
         
 
-class HNSWfaiss(BaseVectorDb):
+class IndexFlatIP(BaseVectorDb):
     """
     HNSW vector database implementation.
     """
@@ -243,7 +243,7 @@ class HNSWfaiss(BaseVectorDb):
             print(f"Error saving the index, config, or ontology: {e}")
 
     @classmethod
-    def from_pretrained(cls: Type['HNSWfaiss'], directory: str) -> 'HNSWfaiss':
+    def from_pretrained(cls: Type['IndexFlatIP'], directory: str) -> 'IndexFlatIP':
         """
         Load a pretrained HNSW index, configuration, and ontology from the specified directory.
 
