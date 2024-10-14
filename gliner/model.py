@@ -468,7 +468,7 @@ class GLiNER(nn.Module, PyTorchModelHubMixin):
         return all_entities
     
     def link_entities(
-        self, text, labels, flat_ner=True, threshold=0.5, multi_label=False, vector_db=None, return_span_embeddings=None
+        self, text, labels, flat_ner=True, threshold=0.5, multi_label=False, vector_db=None
     ):
         """
         Link entities for a single text input with a pretrained HNSW database.
@@ -491,12 +491,11 @@ class GLiNER(nn.Module, PyTorchModelHubMixin):
             threshold=threshold,
             multi_label=multi_label,
             vector_db=vector_db,
-            return_span_embeddings=return_span_embeddings
         )[0]
 
     @torch.no_grad()
     def batch_link_entities(
-        self, texts, labels, flat_ner=True, threshold=0.5, multi_label=False, vector_db=None, return_span_embeddings=None
+        self, texts, labels, flat_ner=True, threshold=0.5, multi_label=False, vector_db=None
     ):
         """
         Predict entities for a batch of texts.
