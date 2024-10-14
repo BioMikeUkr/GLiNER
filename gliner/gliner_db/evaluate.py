@@ -1,17 +1,18 @@
 from typing import *
 import numpy as np
+from tqdm import tqdm
+from .gliner_db import HNSW
 
 class EntityLinkingEvaluator:
-    def __init__(self, data: List[Dict] = None, model = None, db = None):
+    def __init__(self, data: List[Dict] = None, model = None):
         self.data = data
         self.model = model
-        self.db = db
         self.labels = list(set(
             ner[-1] for example in data if "ner" in example
             for ner in example["ner"] if isinstance(ner, list) and len(ner) > 0
         ))
         self.ontology = {i: {"label": label} for i, label in enumerate(self.labels)}
-
+        self.db = HNSW(self.ontology, ndim=model.config.hidden_size, metric="ip")
         print("Vector database preparing:")
         self._prepare_db()
 
@@ -22,7 +23,7 @@ class EntityLinkingEvaluator:
     def evaluate_in_context(self, n_examples: int = 1000, top_k=5):
         self.in_context_scores = []
 
-        for example in self.data:
+        for example in tqdm(self.data, "Evaluating"):
 
             unique_labels = list(set([entity[2] for entity in example["ner"]]))
 
@@ -30,17 +31,20 @@ class EntityLinkingEvaluator:
 
             model_input, raw_batch = self.model.prepare_model_inputs([text], unique_labels)
             model_output = self.model.model(**model_input, return_span_embeddings=True)
-            span_rep = model_output[5]
+            span_rep = model_output[5][0]
+            #print(span_rep.shape)
 
             for ner in example["ner"]:
                 start_idx, end_idx, entity_label = ner
+                if start_idx >= self.model.config.max_length:
+                  continue
                 end_idx = end_idx - start_idx
                 span_embedding = span_rep[start_idx][end_idx].cpu().detach().numpy()
                 res = self.db.search(span_embedding, top_k=top_k)
 
                 match_found = False
                 for i in range(top_k):
-                    if self.db.ontology[str(res["ids"][i])]["label"] == entity_label:
+                    if self.db.ontology[(res["ids"][i])]["label"] == entity_label:
                         self.in_context_scores.append(1)
                         match_found = True
                         break
