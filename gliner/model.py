@@ -524,7 +524,7 @@ class GLiNER(nn.Module, PyTorchModelHubMixin):
         if not isinstance(model_output, torch.Tensor):
             model_output = torch.from_numpy(model_output)
         if return_span_embeddings:
-            return span_rep
+            return [span_rep]
         outputs = self.decoder.decode(
             raw_batch["tokens"],
             raw_batch["id_to_classes"],
