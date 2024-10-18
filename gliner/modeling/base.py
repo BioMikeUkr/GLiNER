@@ -210,7 +210,7 @@ class SpanModel(BaseModel):
                                            max_width = config.max_width,
                                            dropout = config.dropout)
         if config.blank_prompt_rep_layer:
-            self.prompt_rep_layer = create_projection_layer(config.hidden_size, config.dropout, config.blank_prompt_rep_layer)
+            self.prompt_rep_layer = create_projection_layer(config.hidden_size, config.dropout, blank=config.blank_prompt_rep_layer)
         self.prompt_rep_layer = create_projection_layer(config.hidden_size, config.dropout)
 
 
