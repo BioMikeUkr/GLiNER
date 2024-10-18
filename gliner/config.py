@@ -31,6 +31,7 @@ class GLiNERConfig(PretrainedConfig):
                  entity_linking: str = None,
                  ent_token = "<<ENT>>",
                  sep_token = "<<SEP>>",
+                 blank_prompt_rep_layer: bool = False,
                  **kwargs):
         super().__init__(**kwargs)
         if isinstance(encoder_config, dict):
@@ -57,6 +58,7 @@ class GLiNERConfig(PretrainedConfig):
         self.subtoken_pooling = subtoken_pooling
         self.span_mode = span_mode
         self.entity_linking = entity_linking
+        self.blank_prompt_rep_layer = blank_prompt_rep_layer
         self.post_fusion_schema = post_fusion_schema
         self.num_post_fusion_layers = num_post_fusion_layers
         self.vocab_size = vocab_size

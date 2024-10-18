@@ -27,10 +27,12 @@ class LstmSeq2SeqEncoder(nn.Module):
         return output
 
 
-def create_projection_layer(hidden_size: int, dropout: float, out_dim: int = None) -> nn.Sequential:
+def create_projection_layer(hidden_size: int, dropout: float, out_dim: int = None, blank: bool = False) -> nn.Sequential:
     """
     Creates a projection layer with specified configurations.
     """
+    if blank:
+        return nn.Identity()
     if out_dim is None:
         out_dim = hidden_size
 
