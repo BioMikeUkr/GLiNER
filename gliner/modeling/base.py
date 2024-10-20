@@ -211,7 +211,8 @@ class SpanModel(BaseModel):
                                            dropout = config.dropout)
         if config.blank_prompt_rep_layer:
             self.prompt_rep_layer = nn.Identity()
-        self.prompt_rep_layer = create_projection_layer(config.hidden_size, config.dropout)
+        else:
+            self.prompt_rep_layer = create_projection_layer(config.hidden_size, config.dropout)
 
 
     def forward(self,        
