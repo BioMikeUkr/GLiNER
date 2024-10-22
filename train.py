@@ -72,6 +72,11 @@ if __name__ == '__main__':
     else:
         model.model.token_rep_layer.bert_layer.model.requires_grad_(True)
 
+    if args.freeze_labels_encoder:
+        model.model.token_rep_layer.labels_encoder.requires_grad_(False)
+    else:
+        model.model.token_rep_layer.labels_encoder.requires_grad_(True)
+
     if args.new_data_schema:
         train_dataset = GLiNERDataset(train_data, model_config, tokenizer, words_splitter)
         test_dataset = GLiNERDataset(test_data, model_config, tokenizer, words_splitter)
