@@ -20,6 +20,7 @@ if __name__ == '__main__':
     parser.add_argument('--log_dir', type=str, default = 'models/')
     parser.add_argument('--compile_model', type=bool, default = False)
     parser.add_argument('--freeze_language_model', type=bool, default = False)
+    parser.add_argument('--freeze_labels_encoder', type=bool, default = False)
     parser.add_argument('--new_data_schema', type=bool, default = False)
     args = parser.parse_args()
     
