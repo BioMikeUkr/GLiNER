@@ -289,7 +289,107 @@ class SpanModel(BaseModel):
                 f" 'none', 'mean', 'sum'. It will be used 'sum' instead.")
             loss = all_losses.sum()
         return loss
+
+class SpanLinkerModel(BaseModel):
+    def __init__(self, config, encoder_from_pretrained):
+        super(SpanModel, self).__init__(config, encoder_from_pretrained)
+        self.span_rep_layer = SpanRepLayer(span_mode = config.span_mode, 
+                                           hidden_size = config.hidden_size, 
+                                           max_width = config.max_width,
+                                           dropout = config.dropout)
+        self.temperature = nn.Parameter(torch.tensor(0.07))
+
+        if config.blank_prompt_rep_layer:
+            self.prompt_rep_layer = nn.Identity()
+        else:
+            self.prompt_rep_layer = create_projection_layer(config.hidden_size, config.dropout)
+
+
+    def forward(self,        
+                input_ids: Optional[torch.FloatTensor] = None,
+                attention_mask: Optional[torch.LongTensor] = None,
+                labels_embeddings: Optional[torch.FloatTensor] = None,
+                labels_input_ids: Optional[torch.FloatTensor] = None,
+                labels_attention_mask: Optional[torch.LongTensor] = None,
+                words_embedding: Optional[torch.FloatTensor] = None,
+                mask: Optional[torch.LongTensor] = None,
+                prompts_embedding: Optional[torch.FloatTensor] = None,
+                prompts_embedding_mask: Optional[torch.LongTensor] = None,
+                words_mask: Optional[torch.LongTensor] = None,
+                text_lengths: Optional[torch.Tensor] = None,
+                span_idx: Optional[torch.LongTensor] = None,
+                span_mask: Optional[torch.LongTensor] = None,
+                labels: Optional[torch.FloatTensor] = None,
+                return_span_embeddings: bool = False,
+                temperature: float = None, 
+                **kwargs
+                ):
+
+        prompts_embedding, prompts_embedding_mask, words_embedding, mask = self.get_representations(input_ids, attention_mask, 
+                                                                                labels_embeddings, labels_input_ids, labels_attention_mask, 
+                                                                                                                    text_lengths, words_mask)
+        span_idx = span_idx*span_mask.unsqueeze(-1)
+
+        span_rep = self.span_rep_layer(words_embedding, span_idx)
+        
+        prompts_embedding = self.prompt_rep_layer(prompts_embedding)
+        span_rep_norm = nn.functional.normalize(span_rep, p=2, dim=-1)
+        prompts_embedding_norm = nn.functional.normalize(prompts_embedding, p=2, dim=-1)
+        scores = torch.einsum("blkd,bcd->blkc", span_rep_norm, prompts_embedding_norm)
+        
+        if not temperature:
+            temperature = self.temperature
+        else:
+            temperature = nn.Parameter(torch.tensor(temperature))
+
+        scores = scores * torch.exp(temperature)
+
+        loss = None
+        if labels is not None:
+            loss = self.loss(scores, labels, prompts_embedding_mask, span_mask, **kwargs)
+
+        output = GLiNERModelOutput(
+            logits=scores,
+            loss=loss,
+            prompts_embedding=prompts_embedding,
+            prompts_embedding_mask=prompts_embedding_mask,
+            words_embedding=words_embedding,
+            mask=mask,
+            span_rep = span_rep if return_span_embeddings else None
+        )
+        return output
     
+    def loss(self, scores, labels, prompts_embedding_mask, mask_label,
+                        alpha: float = -1., gamma: float = 0.0, label_smoothing: float = 0.0, 
+                        reduction: str = 'sum', **kwargs):
+        
+        batch_size = scores.shape[0]
+        num_classes = prompts_embedding_mask.shape[-1]
+
+        scores = scores.view(-1, num_classes)
+        labels = labels.view(-1, num_classes)
+        
+        all_losses = self._loss(scores, labels, alpha, gamma, label_smoothing)
+
+        masked_loss = all_losses.view(batch_size, -1, num_classes) * prompts_embedding_mask.unsqueeze(1)
+        all_losses = masked_loss.view(-1, num_classes)
+
+        mask_label = mask_label.view(-1, 1)
+        
+        all_losses = all_losses * mask_label.float()
+
+        if reduction == "mean":
+            loss = all_losses.mean()
+        elif reduction == 'sum':
+            loss = all_losses.sum()
+        else:
+            warnings.warn(
+                f"Invalid Value for config 'loss_reduction': '{reduction} \n Supported reduction modes:"
+                f" 'none', 'mean', 'sum'. It will be used 'sum' instead.")
+            loss = all_losses.sum()
+        return loss
+    
+
 class TokenModel(BaseModel):
     def __init__(self, config, encoder_from_pretrained):
         super(TokenModel, self).__init__(config, encoder_from_pretrained)

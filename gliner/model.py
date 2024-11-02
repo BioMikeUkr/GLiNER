@@ -21,7 +21,7 @@ from .data_processing.collator import DataCollator, DataCollatorWithPadding
 from .data_processing.tokenizer import WordsSplitter
 from .decoding import SpanDecoder, TokenDecoder, SpanLinkerDecoder
 from .evaluation import Evaluator
-from .modeling.base import BaseModel, SpanModel, TokenModel
+from .modeling.base import BaseModel, SpanModel, TokenModel, SpanLinkerModel
 from .onnx.model import BaseORTModel, SpanORTModel, TokenORTModel
 
 
@@ -86,6 +86,7 @@ class GLiNER(nn.Module, PyTorchModelHubMixin):
 
             if config.entity_linking == "span_linking":
                 self.decoder = SpanLinkerDecoder(config)
+                self.model = SpanLinkerModel(config)
             else:
                 self.decoder = SpanDecoder(config)
 
