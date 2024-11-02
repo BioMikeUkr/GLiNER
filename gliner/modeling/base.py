@@ -292,7 +292,7 @@ class SpanModel(BaseModel):
 
 class SpanLinkerModel(BaseModel):
     def __init__(self, config, encoder_from_pretrained):
-        super(SpanModel, self).__init__(config, encoder_from_pretrained)
+        super(SpanLinkerModel, self).__init__(config, encoder_from_pretrained)
         self.span_rep_layer = SpanRepLayer(span_mode = config.span_mode, 
                                            hidden_size = config.hidden_size, 
                                            max_width = config.max_width,
@@ -336,7 +336,7 @@ class SpanLinkerModel(BaseModel):
         span_rep_norm = nn.functional.normalize(span_rep, p=2, dim=-1)
         prompts_embedding_norm = nn.functional.normalize(prompts_embedding, p=2, dim=-1)
         scores = torch.einsum("blkd,bcd->blkc", span_rep_norm, prompts_embedding_norm)
-        
+
         if not temperature:
             temperature = self.temperature
         else:
