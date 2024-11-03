@@ -86,7 +86,7 @@ class GLiNER(nn.Module, PyTorchModelHubMixin):
 
             if config.entity_linking == "span_linking":
                 self.decoder = SpanLinkerDecoder(config)
-                self.model = SpanLinkerModel(config)
+                self.model = SpanLinkerModel(config, encoder_from_pretrained)
             else:
                 self.decoder = SpanDecoder(config)
 
