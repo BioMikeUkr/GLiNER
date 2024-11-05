@@ -325,6 +325,11 @@ class SpanLinkerModel(BaseModel):
                 **kwargs
                 ):
 
+        if not temperature:
+            temperature = self.temperature
+        else:
+            temperature = torch.tensor(temperature)
+            
         prompts_embedding, prompts_embedding_mask, words_embedding, mask = self.get_representations(input_ids, attention_mask, 
                                                                                 labels_embeddings, labels_input_ids, labels_attention_mask, 
                                                                                                                     text_lengths, words_mask)
@@ -336,11 +341,6 @@ class SpanLinkerModel(BaseModel):
         span_rep_norm = nn.functional.normalize(span_rep, p=2, dim=-1)  * torch.exp(temperature)
         prompts_embedding_norm = nn.functional.normalize(prompts_embedding, p=2, dim=-1) * torch.exp(temperature)
         scores = torch.einsum("BLKD,BCD->BLKC", span_rep_norm, prompts_embedding_norm)
-
-        if not temperature:
-            temperature = self.temperature
-        else:
-            temperature = nn.Parameter(torch.tensor(temperature))
 
         scores = scores * torch.exp(temperature)
 
