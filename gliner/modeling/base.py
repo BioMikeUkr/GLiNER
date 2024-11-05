@@ -333,9 +333,9 @@ class SpanLinkerModel(BaseModel):
         span_rep = self.span_rep_layer(words_embedding, span_idx)
         
         prompts_embedding = self.prompt_rep_layer(prompts_embedding)
-        span_rep_norm = nn.functional.normalize(span_rep, p=2, dim=-1)
-        prompts_embedding_norm = nn.functional.normalize(prompts_embedding, p=2, dim=-1)
-        scores = torch.einsum("blkd,bcd->blkc", span_rep_norm, prompts_embedding_norm)
+        span_rep_norm = nn.functional.normalize(span_rep, p=2, dim=-1)  * torch.exp(temperature)
+        prompts_embedding_norm = nn.functional.normalize(prompts_embedding, p=2, dim=-1) * torch.exp(temperature)
+        scores = torch.einsum("BLKD,BCD->BLKC", span_rep_norm, prompts_embedding_norm)
 
         if not temperature:
             temperature = self.temperature
