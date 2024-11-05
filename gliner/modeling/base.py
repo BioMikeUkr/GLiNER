@@ -355,7 +355,7 @@ class SpanLinkerModel(BaseModel):
             prompts_embedding_mask=prompts_embedding_mask,
             words_embedding=words_embedding,
             mask=mask,
-            span_rep = span_rep if return_span_embeddings else None
+            span_rep = span_rep_norm if return_span_embeddings else None
         )
         return output
     
