@@ -32,6 +32,8 @@ class GLiNERConfig(PretrainedConfig):
                  ent_token = "<<ENT>>",
                  sep_token = "<<SEP>>",
                  blank_prompt_rep_layer: bool = False,
+                 matryoshka_dims: Optional[list[str]] = None,
+                 matryoshka_weights: Optional[list[float]] = None,
                  **kwargs):
         super().__init__(**kwargs)
         if isinstance(encoder_config, dict):
@@ -59,6 +61,8 @@ class GLiNERConfig(PretrainedConfig):
         self.span_mode = span_mode
         self.entity_linking = entity_linking
         self.blank_prompt_rep_layer = blank_prompt_rep_layer
+        self.matryoshka_dims = matryoshka_dims
+        self.matryoshka_weights = matryoshka_weights
         self.post_fusion_schema = post_fusion_schema
         self.num_post_fusion_layers = num_post_fusion_layers
         self.vocab_size = vocab_size
