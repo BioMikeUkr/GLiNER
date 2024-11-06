@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import warnings
@@ -230,7 +230,7 @@ class SpanModel(BaseModel):
                 span_idx: Optional[torch.LongTensor] = None,
                 span_mask: Optional[torch.LongTensor] = None,
                 labels: Optional[torch.FloatTensor] = None,
-                return_span_embeddings: bool = False,
+                return_span_embeddings: Optional[bool] = False,
                 **kwargs
                 ):
 
@@ -320,8 +320,10 @@ class SpanLinkerModel(BaseModel):
                 span_idx: Optional[torch.LongTensor] = None,
                 span_mask: Optional[torch.LongTensor] = None,
                 labels: Optional[torch.FloatTensor] = None,
-                return_span_embeddings: bool = False,
-                temperature: float = None, 
+                return_span_embeddings: Optional[bool] = False,
+                temperature: Optional[float] = None,
+                matryoshka_dims: Optional[List[int]] = None,
+                matryoshka_weights: Optional[List[float]] = None,
                 **kwargs
                 ):
 
@@ -335,18 +337,28 @@ class SpanLinkerModel(BaseModel):
                                                                                                                     text_lengths, words_mask)
         span_idx = span_idx*span_mask.unsqueeze(-1)
 
-        span_rep = self.span_rep_layer(words_embedding, span_idx)
-        
+        span_rep = self.span_rep_layer(words_embedding, span_idx)            
         prompts_embedding = self.prompt_rep_layer(prompts_embedding)
-        span_rep_norm = nn.functional.normalize(span_rep, p=2, dim=-1)  * torch.exp(temperature)
-        prompts_embedding_norm = nn.functional.normalize(prompts_embedding, p=2, dim=-1) * torch.exp(temperature)
-        scores = torch.einsum("BLKD,BCD->BLKC", span_rep_norm, prompts_embedding_norm)
 
-        scores = scores * torch.exp(temperature)
+        if matryoshka_dims and matryoshka_weights:
+            loss = torch.tensor(0.0, device=scores.device)
+            for dim, weight in zip(matryoshka_dims, matryoshka_weights):
+                span_rep_norm = nn.functional.normalize(span_rep[..., :dim], p=2, dim=-1) * torch.exp(temperature)
+                prompts_embedding_norm = nn.functional.normalize(prompts_embedding[..., :dim], p=2, dim=-1) * torch.exp(temperature)
+                scores = torch.einsum("BLKD,BCD->BLKC", span_rep_norm, prompts_embedding_norm)
+                scores = scores * torch.exp(temperature)
+                current_loss = self.loss(scores, labels, prompts_embedding_mask, span_mask, **kwargs) * weight
+                loss += current_loss
+        else:
+            span_rep_norm = nn.functional.normalize(span_rep, p=2, dim=-1)  * torch.exp(temperature)
+            prompts_embedding_norm = nn.functional.normalize(prompts_embedding, p=2, dim=-1) * torch.exp(temperature)
+            scores = torch.einsum("BLKD,BCD->BLKC", span_rep_norm, prompts_embedding_norm)
 
-        loss = None
-        if labels is not None:
-            loss = self.loss(scores, labels, prompts_embedding_mask, span_mask, **kwargs)
+            scores = scores * torch.exp(temperature)
+
+            loss = None
+            if labels is not None:
+                loss = self.loss(scores, labels, prompts_embedding_mask, span_mask, **kwargs)
 
         output = GLiNERModelOutput(
             logits=scores,
