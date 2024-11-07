@@ -341,17 +341,17 @@ class SpanLinkerModel(BaseModel):
         prompts_embedding = self.prompt_rep_layer(prompts_embedding)
 
         if matryoshka_dims and matryoshka_weights:
-            loss = torch.tensor(0.0, device=scores.device)
+            loss = torch.tensor(0.0, device=prompts_embedding.device)
             for dim, weight in zip(matryoshka_dims, matryoshka_weights):
-                span_rep_norm = nn.functional.normalize(span_rep[..., :dim], p=2, dim=-1) * torch.exp(temperature)
-                prompts_embedding_norm = nn.functional.normalize(prompts_embedding[..., :dim], p=2, dim=-1) * torch.exp(temperature)
+                span_rep_norm = nn.functional.normalize(span_rep[..., :dim], p=2, dim=-1)
+                prompts_embedding_norm = nn.functional.normalize(prompts_embedding[..., :dim], p=2, dim=-1)
                 scores = torch.einsum("BLKD,BCD->BLKC", span_rep_norm, prompts_embedding_norm)
                 scores = scores * torch.exp(temperature)
                 current_loss = self.loss(scores, labels, prompts_embedding_mask, span_mask, **kwargs) * weight
                 loss += current_loss
         else:
-            span_rep_norm = nn.functional.normalize(span_rep, p=2, dim=-1)  * torch.exp(temperature)
-            prompts_embedding_norm = nn.functional.normalize(prompts_embedding, p=2, dim=-1) * torch.exp(temperature)
+            span_rep_norm = nn.functional.normalize(span_rep, p=2, dim=-1)
+            prompts_embedding_norm = nn.functional.normalize(prompts_embedding, p=2, dim=-1)
             scores = torch.einsum("BLKD,BCD->BLKC", span_rep_norm, prompts_embedding_norm)
 
             scores = scores * torch.exp(temperature)
