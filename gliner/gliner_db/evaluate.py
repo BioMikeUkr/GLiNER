@@ -17,7 +17,7 @@ class EntityLinkingEvaluator:
         self._prepare_db()
 
     def _prepare_db(self):
-        self.encoded_labels = self.model.encode_labels([value["label"] for _, value in self.ontology.items()], project_promts=True).cpu().detach().numpy()
+        self.encoded_labels = self.model.encode_labels([value["label"] for _, value in self.ontology.items()], project_promts=True, normalize=True).cpu().detach().numpy()
         self.db.add_data(np.array(list(self.db.ontology.keys())), self.encoded_labels)
 
     def evaluate_in_context(self, n_examples: int = 1000, top_k=5):
