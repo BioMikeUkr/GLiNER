@@ -231,6 +231,8 @@ class SpanModel(BaseModel):
                 span_mask: Optional[torch.LongTensor] = None,
                 labels: Optional[torch.FloatTensor] = None,
                 return_span_embeddings: Optional[bool] = False,
+                harmonics_dims: Optional[List[int]] = None,
+                harmonics_weights: Optional[List[float]] = None,
                 **kwargs
                 ):
 
@@ -243,11 +245,18 @@ class SpanModel(BaseModel):
         
         prompts_embedding = self.prompt_rep_layer(prompts_embedding)
 
-        scores = torch.einsum("BLKD,BCD->BLKC", span_rep, prompts_embedding)
+        if harmonics_dims and harmonics_weights:
+            loss = torch.tensor(0.0, device=prompts_embedding.device)
+            for dim, weight in zip(harmonics_dims, harmonics_weights):
+                scores = torch.einsum("BLKD,BCD->BLKC", span_rep[..., :dim], prompts_embedding[..., :dim])
+                current_loss = self.loss(scores, labels, prompts_embedding_mask, span_mask, **kwargs) * weight
+                loss += current_loss
+        else:
+            scores = torch.einsum("BLKD,BCD->BLKC", span_rep, prompts_embedding)
 
-        loss = None
-        if labels is not None:
-            loss = self.loss(scores, labels, prompts_embedding_mask, span_mask, **kwargs)
+            loss = None
+            if labels is not None:
+                loss = self.loss(scores, labels, prompts_embedding_mask, span_mask, **kwargs)
 
         output = GLiNERModelOutput(
             logits=scores,
