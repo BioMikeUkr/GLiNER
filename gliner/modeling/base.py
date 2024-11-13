@@ -322,8 +322,8 @@ class SpanLinkerModel(BaseModel):
                 labels: Optional[torch.FloatTensor] = None,
                 return_span_embeddings: Optional[bool] = False,
                 temperature: Optional[float] = None,
-                matryoshka_dims: Optional[List[int]] = None,
-                matryoshka_weights: Optional[List[float]] = None,
+                harmonics_dims: Optional[List[int]] = None,
+                harmonics_weights: Optional[List[float]] = None,
                 **kwargs
                 ):
 
@@ -340,9 +340,9 @@ class SpanLinkerModel(BaseModel):
         span_rep = self.span_rep_layer(words_embedding, span_idx)            
         prompts_embedding = self.prompt_rep_layer(prompts_embedding)
 
-        if matryoshka_dims and matryoshka_weights:
+        if harmonics_dims and harmonics_weights:
             loss = torch.tensor(0.0, device=prompts_embedding.device)
-            for dim, weight in zip(matryoshka_dims, matryoshka_weights):
+            for dim, weight in zip(harmonics_dims, harmonics_weights):
                 span_rep_norm = nn.functional.normalize(span_rep[..., :dim], p=2, dim=-1)
                 prompts_embedding_norm = nn.functional.normalize(prompts_embedding[..., :dim], p=2, dim=-1)
                 scores = torch.einsum("BLKD,BCD->BLKC", span_rep_norm, prompts_embedding_norm)

@@ -97,8 +97,8 @@ class Trainer(transformers.Trainer):
                         gamma = self.args.focal_loss_gamma,
                         label_smoothing = self.args.label_smoothing,
                         reduction = self.args.loss_reduction,
-                        matryoshka_dims=self.args.matryoshka_dims,
-                        matryoshka_weights=self.args.matryoshka_weights,
+                        harmonics_dims=self.args.harmonics_dims,
+                        harmonics_weights=self.args.harmonics_weights,
                         **inputs)
         loss = outputs.loss
         return loss
